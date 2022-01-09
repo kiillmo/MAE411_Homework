@@ -1,0 +1,115 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
+#MAE 411 HW #3
+
+# Ycc = MC + (MH/4) - (MO/2)
+# Ymin = Ycc - (MC/2)
+
+
+# Part 1:
+# Assume Excess Air: Y >= Ycc
+# n-decane (gaseous)
+# Tr = 500K
+# Tp = 600K --> 2200K, inclusive increments of 100K
+# Compute (FA)mass = f
+# Plot f vs. Tp
+
+# h(T) = A + BT + Cln(T)
+
+# Coefficients
+
+coefficient_A = [
+        [299180, 309070],
+        [56835, 93048],
+        [88923, 154670],
+        [43388, 127010],
+        [31317, 44639],
+]
+
+coefficient_B = [
+        [37.85, 39.29],
+        [66.27, 68.58],
+        [49.36, 60.43],
+        [42.27, 46.25],
+        [37.46, 39.32],
+]
+
+coefficient_C = [
+        [-4571.9, -6201.9],
+        [-11634.0, -16979.0],
+        [-7940.8, -19212.0],
+        [-6635.4, -18798.0],
+        [-4559.3, -6753.4],
+]
+
+
+
+Mair = 28.97
+Mfuel = 142
+Hrp = -6312300
+Tr = 500
+Tp = [600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000, 2100, 2200]
+
+MC = 10
+MH = 22
+MO = 0
+
+Ycc = MC + (MH/4) - (MO/2)
+Ymin = Ycc - (MC/2)
+Y = []
+
+N1 = 0
+N2 = MC
+N3 = MH/2
+# N4 = Y-Ycc
+# N5 = 3.76*Y
+
+# f = (1/(4.76*Y)) * (Mfuel/Mair)
+f = []
+
+# Solve for Y
+for i in Tp:
+    if i < 400 or i > 6000:
+        print("error: Tp out of range")
+
+    elif i >= 400 and i <= 1600:
+        deltaH_CO = (coefficient_A[0][0] + (i * coefficient_B[0][0]) + (np.log(i) * coefficient_C[0][0])) - (coefficient_A[0][0] + (Tr * coefficient_B[0][0]) + (np.log(Tr) * coefficient_C[0][0]))
+        deltaH_CO2 = (coefficient_A[1][0] + (i * coefficient_B[1][0]) + (np.log(i) * coefficient_C[1][0])) - (coefficient_A[1][0] + (Tr * coefficient_B[1][0]) + (np.log(Tr) * coefficient_C[1][0]))
+        deltaH_H2O = (coefficient_A[2][0] + (i * coefficient_B[2][0]) + (np.log(i) * coefficient_C[2][0])) - (coefficient_A[2][0] + (Tr * coefficient_B[2][0]) + (np.log(Tr) * coefficient_C[2][0]))
+        deltaH_O2 = (coefficient_A[3][0] + (i * coefficient_B[3][0]) + (np.log(i) * coefficient_C[3][0])) - (coefficient_A[3][0] + (Tr * coefficient_B[3][0]) + (np.log(Tr) * coefficient_C[3][0]))
+        deltaH_N2 = (coefficient_A[4][0] + (i * coefficient_B[4][0]) + (np.log(i) * coefficient_C[4][0])) - (coefficient_A[4][0] + (Tr * coefficient_B[4][0]) + (np.log(Tr) * coefficient_C[4][0]))
+
+    elif i > 1600 and i <= 6000:
+        deltaH_CO = (coefficient_A[0][1] + (i * coefficient_B[0][1]) + (np.log(i) * coefficient_C[0][1])) - (coefficient_A[0][0] + (Tr * coefficient_B[0][0]) + (np.log(Tr) * coefficient_C[0][0]))
+        deltaH_CO2 = (coefficient_A[1][1] + (i * coefficient_B[1][1]) + (np.log(i) * coefficient_C[1][1])) - (coefficient_A[1][0] + (Tr * coefficient_B[1][0]) + (np.log(Tr) * coefficient_C[1][0]))
+        deltaH_H2O = (coefficient_A[2][1] + (i * coefficient_B[2][1]) + (np.log(i) * coefficient_C[2][1])) - (coefficient_A[2][0] + (Tr * coefficient_B[2][0]) + (np.log(Tr) * coefficient_C[2][0]))
+        deltaH_O2 = (coefficient_A[3][1] + (i * coefficient_B[3][1]) + (np.log(i) * coefficient_C[3][1])) - (coefficient_A[3][0] + (Tr * coefficient_B[3][0]) + (np.log(Tr) * coefficient_C[3][0]))
+        deltaH_N2 = (coefficient_A[4][1] + (i * coefficient_B[4][1]) + (np.log(i) * coefficient_C[4][1])) - (coefficient_A[4][0] + (Tr * coefficient_B[4][0]) + (np.log(Tr) * coefficient_C[4][0]))
+
+    Y_solve = ((Ycc*deltaH_O2)-Hrp-(N1*282800)-(N1*deltaH_CO)-(N2*deltaH_CO2)-(N3*deltaH_H2O))/(deltaH_O2 + (3.76*deltaH_N2))
+    Y.append(Y_solve)
+    f_solve = round((1/(4.76*Y_solve)) * (Mfuel/Mair),7)
+    f.append(f_solve)
+
+
+
+plt.plot(Tp, f, marker='o')
+
+
+
+plt.title("MAE 411 HW#3 Part I")
+plt.xlabel("Tp")
+plt.ylabel("f")
+
+# zip joins x and y coordinates in pairs
+for x,y in zip(Tp,f):
+
+    plt.annotate(y, # this is the text
+                 (x,y), # this is the point to label
+                 textcoords="offset points", # how to position the text
+                 xytext=(-2,10), # distance from text to points (x,y)
+                 ha='center') # horizontal alignment can be left, right or center
+
+plt.show()
+

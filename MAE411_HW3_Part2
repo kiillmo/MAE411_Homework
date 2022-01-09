@@ -1,0 +1,135 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy
+from scipy import optimize
+
+#MAE 411 HW #3
+
+# Ycc = MC + (MH/4) - (MO/2)
+# Ymin = Ycc - (MC/2)
+
+
+# Part 2:
+# Assume Excess Air: Y >= Ycc
+# n-octane (gaseous)
+# Tr = 650K
+# Y/Ycc = Ymin/Ycc, .8, .9, 1.0, 1.1, 1.2, ..., 2.0
+# Compute Tp (adiabatic flame temp)
+# Plot Tp vs. Y/Ycc
+
+# h(T) = A + BT + Cn(T)
+
+# Coefficients
+
+coefficient_A = [
+        [299180, 309070],
+        [56835, 93048],
+        [88923, 154670],
+        [43388, 127010],
+        [31317, 44639],
+]
+
+coefficient_B = [
+        [37.85, 39.29],
+        [66.27, 68.58],
+        [49.36, 60.43],
+        [42.27, 46.25],
+        [37.46, 39.32],
+]
+
+coefficient_C = [
+        [-4571.9, -6201.9],
+        [-11634.0, -16979.0],
+        [-7940.8, -19212.0],
+        [-6635.4, -18798.0],
+        [-4559.3, -6753.4],
+]
+
+
+
+Mair = 28.97
+Mfuel = 114
+Hrp = -5089100
+Tr = 650
+
+MC = 8
+MH = 18
+MO = 0
+
+Ycc = MC + (MH/4) - (MO/2)
+Ymin = Ycc - (MC/2)
+Y_Ycc = np.array([Ymin/Ycc, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0])
+Y = Y_Ycc * Ycc
+Y[4] = round(Y[4],2)
+
+f = (1/(4.76*Y)) * (Mfuel/Mair)
+
+Tp = []
+
+# Solve for Y
+for i, x in enumerate(Y_Ycc):
+
+    if Y[i] >= Ymin and Y[i] < Ycc:
+
+        N1 = 2*(Ycc-Y[i])
+        N2 = 2*(Y[i]-Ymin)
+        N3 = MH/2
+        N4 = 0
+        N5 = 3.76*Y[i]
+
+        def fxn(x):
+
+            deltaH_CO = (coefficient_A[0][1] + (x * coefficient_B[0][1]) + (np.log(x) * coefficient_C[0][1])) - (coefficient_A[0][0] + (Tr * coefficient_B[0][0]) + (np.log(Tr) * coefficient_C[0][0]))
+            deltaH_CO2 = (coefficient_A[1][1] + (x * coefficient_B[1][1]) + (np.log(x) * coefficient_C[1][1])) - (coefficient_A[1][0] + (Tr * coefficient_B[1][0]) + (np.log(Tr) * coefficient_C[1][0]))
+            deltaH_H2O = (coefficient_A[2][1] + (x * coefficient_B[2][1]) + (np.log(x) * coefficient_C[2][1])) - (coefficient_A[2][0] + (Tr * coefficient_B[2][0]) + (np.log(Tr) * coefficient_C[2][0]))
+            deltaH_O2 = (coefficient_A[3][1] + (x * coefficient_B[3][1]) + (np.log(x) * coefficient_C[3][1])) - (coefficient_A[3][0] + (Tr * coefficient_B[3][0]) + (np.log(Tr) * coefficient_C[3][0]))
+            deltaH_N2 = (coefficient_A[4][1] + (x * coefficient_B[4][1]) + (np.log(x) * coefficient_C[4][1])) - (coefficient_A[4][0] + (Tr * coefficient_B[4][0]) + (np.log(Tr) * coefficient_C[4][0]))
+
+            return Hrp + (N1*282800) + (N1*(deltaH_CO)) + (N2*(deltaH_CO2)) + (N3*(deltaH_H2O)) + (N4*(deltaH_O2)) + (N5*(deltaH_N2))
+
+        Tp_solve = scipy.optimize.fsolve(fxn, 2000)
+        Tp.append(round(Tp_solve[0],4))
+
+    elif Y[i] >= Ycc:
+
+        N1 = 0
+        N2 = MC
+        N3 = MH/2
+        N4 = Y[i]-Ycc
+        N5 = 3.76*Y[i]
+
+        def fxn(x):
+
+            deltaH_CO = (coefficient_A[0][1] + (x * coefficient_B[0][1]) + (np.log(x) * coefficient_C[0][1])) - (coefficient_A[0][0] + (Tr * coefficient_B[0][0]) + (np.log(Tr) * coefficient_C[0][0]))
+            deltaH_CO2 = (coefficient_A[1][1] + (x * coefficient_B[1][1]) + (np.log(x) * coefficient_C[1][1])) - (coefficient_A[1][0] + (Tr * coefficient_B[1][0]) + (np.log(Tr) * coefficient_C[1][0]))
+            deltaH_H2O = (coefficient_A[2][1] + (x * coefficient_B[2][1]) + (np.log(x) * coefficient_C[2][1])) - (coefficient_A[2][0] + (Tr * coefficient_B[2][0]) + (np.log(Tr) * coefficient_C[2][0]))
+            deltaH_O2 = (coefficient_A[3][1] + (x * coefficient_B[3][1]) + (np.log(x) * coefficient_C[3][1])) - (coefficient_A[3][0] + (Tr * coefficient_B[3][0]) + (np.log(Tr) * coefficient_C[3][0]))
+            deltaH_N2 = (coefficient_A[4][1] + (x * coefficient_B[4][1]) + (np.log(x) * coefficient_C[4][1])) - (coefficient_A[4][0] + (Tr * coefficient_B[4][0]) + (np.log(Tr) * coefficient_C[4][0]))
+
+            return Hrp + (N1*282800) + (N1*(deltaH_CO)) + (N2*(deltaH_CO2)) + (N3*(deltaH_H2O)) + (N4*(deltaH_O2)) + (N5*(deltaH_N2))
+
+        Tp_solve = scipy.optimize.fsolve(fxn, 2000)
+        Tp.append(round(Tp_solve[0],4))
+
+
+
+
+plt.plot(Y_Ycc, Tp, marker='o')
+
+
+
+plt.title("MAE 411 HW#3 Part II")
+plt.xlabel("Y/Ycc")
+plt.ylabel("Tp")
+
+# zip joins x and y coordinates in pairs
+for x,y in zip(Y_Ycc,Tp):
+
+    plt.annotate(y, # this is the text
+                 (x,y), # this is the point to label
+                 textcoords="offset points", # how to position the text
+                 xytext=(35,0), # distance from text to points (x,y)
+                 ha='center') # horizontal alignment can be left, right or center
+
+plt.show()
+

@@ -1,0 +1,410 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy
+from scipy import optimize
+from tabulate import tabulate
+
+#MAE 411 HW #8
+
+# Part 1
+
+# Given: Y/Ycc = 0.70, 1.0, 1.40
+# Fuel: Octane
+# Compression Ratio, rr = 9.0
+# T1 = 300K, P1 = 100kPa, CD1 = 0.5 Liters
+
+# Determine: T2, P2, W1_2=Wcompression for all the cases, Y/Ycc, given above
+
+# Part 2
+
+# Given: Y/Ycc = 0.70, 1.0, 1.40
+# Fuel: Octane
+# Use T2, P2, and mole numbers & mole fractions from Part 1
+
+# Determine: T3, P3, mole fractions products (yCO, yCO2, yH2O, yO2, yN2), mole numbers of products (nCO, nCO2, nH2O, nO2, nN2, ntot) 
+# for all the cases, Y/Ycc, given above
+
+# Part 3
+
+# Given: Y/Ycc = 0.70, 1.0, 1.40
+# Fuel: Octane
+# Use T3, P3, and mole numbers & mole fractions from Part 2
+
+# Determine: T4, P4, W3_4-Wexpansion for all the cases, Y/Ycc, given above
+
+
+# Coefficients
+
+coefficient_A = [
+        [299180, 309070],
+        [56835, 93048],
+        [88923, 154670],
+        [43388, 127010],
+        [31317, 44639],
+]
+
+coefficient_B = [
+        [37.85, 39.29],
+        [66.27, 68.58],
+        [49.36, 60.43],
+        [42.27, 46.25],
+        [37.46, 39.32],
+]
+
+coefficient_C = [
+        [-4571.9, -6201.9],
+        [-11634.0, -16979.0],
+        [-7940.8, -19212.0],
+        [-6635.4, -18798.0],
+        [-4559.3, -6753.4],
+]
+
+coefficient_D = [
+        [-31.10, -42.77],
+        [-200.0, -220.4],
+        [-117.0, -204.6],
+        [-55.15, -92.15],
+        [-34.82, -50.24],
+]
+
+Rbar = 8.31451
+Mair = 28.97
+Mfuel = 114
+Hrp = -5089100
+Urp = -5097780
+
+aair = 27.5
+bair = 0.0057
+afuel = 38.4
+bfuel = 0.429
+
+rr = 9.0
+T1 = 300 
+P1 = 100
+CD1 = 0.0005
+
+nRtotal = (P1 * CD1)/(Rbar * T1)
+
+MC = 8
+MH = 18
+MO = 0
+Ycc = MC + (MH/4) - (MO/2)
+Ymin = Ycc - (MC/2)
+Y_Ycc = np.array([.7, 1.0, 1.4])
+
+yMatrix = np.zeros((5, 3))
+nMatrix = np.zeros((5, 3))
+TMatrix = np.zeros((3, 3))
+PMatrix = np.zeros((3, 3))
+WMatrix = np.zeros((2, 3))
+
+
+
+
+
+# Solve for Y
+for i, x in enumerate(Y_Ycc):
+
+    Y = x * Ycc
+    yfuel = 1/(1+(4.76*Y))
+    yair = (4.76*Y)/(1+(4.76*Y))
+
+    nfuel = yfuel * nRtotal
+    nair = yair * nRtotal
+
+    nMfuel = nfuel * Mfuel
+    nMair = nair * Mair
+    
+    f = nMfuel/nMair
+
+    if Y < Ycc:
+        N1 = 2 * (Ycc-Y)
+        N2 = 2 * (Y - Ymin)
+        N3 = MH/2
+        N4 = 0
+        N5 = 3.76*Y
+    
+    else:
+        N1 = 0
+        N2 = MC
+        N3 = MH/2
+        N4 = Y-Ycc
+        N5 = 3.76*Y
+    
+    nPtotal = nRtotal * ((N1+N2+N3+N4+N5)/(1+(4.76*Y)))
+
+    yCO = N1/(N1+N2+N3+N4+N5)
+    yCO2 = N2/(N1+N2+N3+N4+N5)
+    yH2O = N3/(N1+N2+N3+N4+N5)
+    yO2 = N4/(N1+N2+N3+N4+N5)
+    yN2 = N5/(N1+N2+N3+N4+N5)
+
+    yMatrix[0][i]=yCO
+    yMatrix[1][i]=yCO2
+    yMatrix[2][i]=yH2O
+    yMatrix[3][i]=yO2
+    yMatrix[4][i]=yN2
+
+    nCO = yCO * nPtotal
+    nCO2 = yCO2 * nPtotal
+    nH2O = yH2O * nPtotal
+    nO2 = yO2 * nPtotal
+    nN2 = yN2 * nPtotal
+
+    nMatrix[0][i]=nCO
+    nMatrix[1][i]=nCO2
+    nMatrix[2][i]=nH2O
+    nMatrix[3][i]=nO2
+    nMatrix[4][i]=nN2
+
+    def fxn(x):
+
+        return ((yair*((((aair-Rbar)*np.log(x))+(bair*x))-(((aair-Rbar)*np.log(T1))+(bair*T1))))
+        +(yfuel*((((afuel-Rbar)*np.log(x))+(bfuel*x))-(((afuel-Rbar)*np.log(T1))+(bfuel*T1))))
+        +(Rbar*np.log(1/rr)))
+
+    T2_solver = scipy.optimize.fsolve(fxn, 600)
+    T2 = T2_solver[0]
+    P2 = T2 * (P1/T1) * rr
+    W1_2 = -((nair*(((aair-Rbar)*(T2-T1))+(.5*bair*(T2**2 - T1**2))))+(nfuel*(((afuel-Rbar)*(T2-T1))+(.5*bfuel*(T2**2 - T1**2)))))
+
+    TMatrix[0][i] = T2
+    PMatrix[0][i] = P2
+    WMatrix[0][i] = W1_2
+
+    if T2 <= 1600:
+
+        def fxnless(x):
+
+            deltaH_CO = (coefficient_A[0][0] + (x * coefficient_B[0][0]) + (np.log(x) * coefficient_C[0][0])) - (coefficient_A[0][0] + (T2 * coefficient_B[0][0]) + (np.log(T2) * coefficient_C[0][0]))
+            deltaH_CO2 = (coefficient_A[1][0] + (x * coefficient_B[1][0]) + (np.log(x) * coefficient_C[1][0])) - (coefficient_A[1][0] + (T2 * coefficient_B[1][0]) + (np.log(T2) * coefficient_C[1][0]))
+            deltaH_H2O = (coefficient_A[2][0] + (x * coefficient_B[2][0]) + (np.log(x) * coefficient_C[2][0])) - (coefficient_A[2][0] + (T2 * coefficient_B[2][0]) + (np.log(T2) * coefficient_C[2][0]))
+            deltaH_O2 = (coefficient_A[3][0] + (x * coefficient_B[3][0]) + (np.log(x) * coefficient_C[3][0])) - (coefficient_A[3][0] + (T2 * coefficient_B[3][0]) + (np.log(T2) * coefficient_C[3][0]))
+            deltaH_N2 = (coefficient_A[4][0] + (x * coefficient_B[4][0]) + (np.log(x) * coefficient_C[4][0])) - (coefficient_A[4][0] + (T2 * coefficient_B[4][0]) + (np.log(T2) * coefficient_C[4][0]))
+
+            return Urp + (N1*281400) + (N1*((deltaH_CO)-(Rbar*(x-T2)))) + (N2*((deltaH_CO2)-(Rbar*(x-T2)))) + (N3*((deltaH_H2O)-(Rbar*(x-T2)))) + (N4*((deltaH_O2)-(Rbar*(x-T2)))) + (N5*((deltaH_N2)-(Rbar*(x-T2))))
+        
+        def fxngreater(x):
+
+            deltaH_CO = (coefficient_A[0][1] + (x * coefficient_B[0][1]) + (np.log(x) * coefficient_C[0][1])) - (coefficient_A[0][0] + (T2 * coefficient_B[0][0]) + (np.log(T2) * coefficient_C[0][0]))
+            deltaH_CO2 = (coefficient_A[1][1] + (x * coefficient_B[1][1]) + (np.log(x) * coefficient_C[1][1])) - (coefficient_A[1][0] + (T2 * coefficient_B[1][0]) + (np.log(T2) * coefficient_C[1][0]))
+            deltaH_H2O = (coefficient_A[2][1] + (x * coefficient_B[2][1]) + (np.log(x) * coefficient_C[2][1])) - (coefficient_A[2][0] + (T2 * coefficient_B[2][0]) + (np.log(T2) * coefficient_C[2][0]))
+            deltaH_O2 = (coefficient_A[3][1] + (x * coefficient_B[3][1]) + (np.log(x) * coefficient_C[3][1])) - (coefficient_A[3][0] + (T2 * coefficient_B[3][0]) + (np.log(T2) * coefficient_C[3][0]))
+            deltaH_N2 = (coefficient_A[4][1] + (x * coefficient_B[4][1]) + (np.log(x) * coefficient_C[4][1])) - (coefficient_A[4][0] + (T2 * coefficient_B[4][0]) + (np.log(T2) * coefficient_C[4][0]))
+
+            return Urp + (N1*281400) + (N1*((deltaH_CO)-(Rbar*(x-T2)))) + (N2*((deltaH_CO2)-(Rbar*(x-T2)))) + (N3*((deltaH_H2O)-(Rbar*(x-T2)))) + (N4*((deltaH_O2)-(Rbar*(x-T2)))) + (N5*((deltaH_N2)-(Rbar*(x-T2))))
+
+        T3less = scipy.optimize.fsolve(fxnless, 1400)
+        T3greater = scipy.optimize.fsolve(fxngreater, 3000)
+
+        if T3less <= 1600 and T3greater <= 1600:
+            T3 = T3less[0]
+        elif T3less > 1600 and T3greater > 1600:
+            T3 = T3greater[0]
+        elif T3less > 1600 and T3greater <= 1600:
+            T3 = T3greater[0]
+        elif T3less <= 1600 and T3greater > 1600:
+            T3 = T3greater[0]
+
+        TMatrix[1][i] = T3
+
+    elif T2 > 1600:
+
+        def fxnless(x):
+
+            deltaH_CO = (coefficient_A[0][0] + (x * coefficient_B[0][0]) + (np.log(x) * coefficient_C[0][0])) - (coefficient_A[0][1] + (T2 * coefficient_B[0][1]) + (np.log(T2) * coefficient_C[0][1]))
+            deltaH_CO2 = (coefficient_A[1][0] + (x * coefficient_B[1][0]) + (np.log(x) * coefficient_C[1][0])) - (coefficient_A[1][1] + (T2 * coefficient_B[1][1]) + (np.log(T2) * coefficient_C[1][1]))
+            deltaH_H2O = (coefficient_A[2][0] + (x * coefficient_B[2][0]) + (np.log(x) * coefficient_C[2][0])) - (coefficient_A[2][1] + (T2 * coefficient_B[2][1]) + (np.log(T2) * coefficient_C[2][1]))
+            deltaH_O2 = (coefficient_A[3][0] + (x * coefficient_B[3][0]) + (np.log(x) * coefficient_C[3][0])) - (coefficient_A[3][1] + (T2 * coefficient_B[3][1]) + (np.log(T2) * coefficient_C[3][1]))
+            deltaH_N2 = (coefficient_A[4][0] + (x * coefficient_B[4][0]) + (np.log(x) * coefficient_C[4][0])) - (coefficient_A[4][1] + (T2 * coefficient_B[4][1]) + (np.log(T2) * coefficient_C[4][1]))
+
+            return Urp + (N1*281400) + (N1*((deltaH_CO)-(Rbar*(x-T2)))) + (N2*((deltaH_CO2)-(Rbar*(x-T2)))) + (N3*((deltaH_H2O)-(Rbar*(x-T2)))) + (N4*((deltaH_O2)-(Rbar*(x-T2)))) + (N5*((deltaH_N2)-(Rbar*(x-T2))))
+        
+        def fxngreater(x):
+
+            deltaH_CO = (coefficient_A[0][1] + (x * coefficient_B[0][1]) + (np.log(x) * coefficient_C[0][1])) - (coefficient_A[0][1] + (T2 * coefficient_B[0][1]) + (np.log(T2) * coefficient_C[0][1]))
+            deltaH_CO2 = (coefficient_A[1][1] + (x * coefficient_B[1][1]) + (np.log(x) * coefficient_C[1][1])) - (coefficient_A[1][1] + (T2 * coefficient_B[1][1]) + (np.log(T2) * coefficient_C[1][1]))
+            deltaH_H2O = (coefficient_A[2][1] + (x * coefficient_B[2][1]) + (np.log(x) * coefficient_C[2][1])) - (coefficient_A[2][1] + (T2 * coefficient_B[2][1]) + (np.log(T2) * coefficient_C[2][1]))
+            deltaH_O2 = (coefficient_A[3][1] + (x * coefficient_B[3][1]) + (np.log(x) * coefficient_C[3][1])) - (coefficient_A[3][1] + (T2 * coefficient_B[3][1]) + (np.log(T2) * coefficient_C[3][1]))
+            deltaH_N2 = (coefficient_A[4][1] + (x * coefficient_B[4][1]) + (np.log(x) * coefficient_C[4][1])) - (coefficient_A[4][1] + (T2 * coefficient_B[4][1]) + (np.log(T2) * coefficient_C[4][1]))
+
+            return Urp + (N1*281400) + (N1*((deltaH_CO)-(Rbar*(x-T2)))) + (N2*((deltaH_CO2)-(Rbar*(x-T2)))) + (N3*((deltaH_H2O)-(Rbar*(x-T2)))) + (N4*((deltaH_O2)-(Rbar*(x-T2)))) + (N5*((deltaH_N2)-(Rbar*(x-T2))))
+
+        T3less = scipy.optimize.fsolve(fxnless, 1400)
+        T3greater = scipy.optimize.fsolve(fxngreater, 3000)
+
+        if T3less <= 1600 and T3greater <= 1600:
+            T3 = T3less[0]
+        elif T3less > 1600 and T3greater > 1600:
+            T3 = T3greater[0]
+        elif T3less > 1600 and T3greater <= 1600:
+            T3 = T3greater[0]
+        elif T3less <= 1600 and T3greater > 1600:
+            T3 = T3greater[0]
+
+        TMatrix[1][i] = T3
+
+        
+
+    P3 = (nPtotal/nRtotal)*(P2)*(T3/T2)
+    PMatrix[1][i] = P3
+
+    if T3 <= 1600:
+
+        def fxnless(x):
+
+            return (((yCO*(((coefficient_B[0][0]*np.log(x))-(coefficient_C[0][0]/x)+(-((coefficient_B[0][0]*np.log(1600))-(coefficient_C[0][0]/1600))))-((coefficient_B[0][0]*np.log(T3))-(coefficient_C[0][0]/T3)+(-((coefficient_B[0][0]*np.log(1600))-(coefficient_C[0][0]/1600))))))
+            + (yCO2*(((coefficient_B[1][0]*np.log(x))-(coefficient_C[1][0]/x)+(-((coefficient_B[1][0]*np.log(1600))-(coefficient_C[1][0]/1600))))-((coefficient_B[1][0]*np.log(T3))-(coefficient_C[1][0]/T3)+(-((coefficient_B[1][0]*np.log(1600))-(coefficient_C[1][0]/1600))))))
+            + (yH2O*(((coefficient_B[2][0]*np.log(x))-(coefficient_C[2][0]/x)+(-((coefficient_B[2][0]*np.log(1600))-(coefficient_C[2][0]/1600))))-((coefficient_B[2][0]*np.log(T3))-(coefficient_C[2][0]/T3)+(-((coefficient_B[2][0]*np.log(1600))-(coefficient_C[2][0]/1600))))))
+            + (yO2*(((coefficient_B[3][0]*np.log(x))-(coefficient_C[3][0]/x)+(-((coefficient_B[3][0]*np.log(1600))-(coefficient_C[3][0]/1600))))-((coefficient_B[3][0]*np.log(T3))-(coefficient_C[3][0]/T3)+(-((coefficient_B[3][0]*np.log(1600))-(coefficient_C[3][0]/1600))))))
+            + (yN2*(((coefficient_B[4][0]*np.log(x))-(coefficient_C[4][0]/x)+(-((coefficient_B[4][0]*np.log(1600))-(coefficient_C[4][0]/1600))))-((coefficient_B[4][0]*np.log(T3))-(coefficient_C[4][0]/T3)+(-((coefficient_B[4][0]*np.log(1600))-(coefficient_C[4][0]/1600)))))))
+            - (Rbar * (np.log(x)-np.log(T3))) + (Rbar*np.log(rr)))
+        
+        def fxngreater(x):
+
+            return (((yCO*(((coefficient_B[0][1]*np.log(x))-(coefficient_C[0][1]/x)+(-((coefficient_B[0][1]*np.log(1600))-(coefficient_C[0][1]/1600))))-((coefficient_B[0][0]*np.log(T3))-(coefficient_C[0][0]/T3)+(-((coefficient_B[0][0]*np.log(1600))-(coefficient_C[0][0]/1600))))))
+            + (yCO2*(((coefficient_B[1][1]*np.log(x))-(coefficient_C[1][1]/x)+(-((coefficient_B[1][1]*np.log(1600))-(coefficient_C[1][1]/1600))))-((coefficient_B[1][0]*np.log(T3))-(coefficient_C[1][0]/T3)+(-((coefficient_B[1][0]*np.log(1600))-(coefficient_C[1][0]/1600))))))
+            + (yH2O*(((coefficient_B[2][1]*np.log(x))-(coefficient_C[2][1]/x)+(-((coefficient_B[2][1]*np.log(1600))-(coefficient_C[2][1]/1600))))-((coefficient_B[2][0]*np.log(T3))-(coefficient_C[2][0]/T3)+(-((coefficient_B[2][0]*np.log(1600))-(coefficient_C[2][0]/1600))))))
+            + (yO2*(((coefficient_B[3][1]*np.log(x))-(coefficient_C[3][1]/x)+(-((coefficient_B[3][1]*np.log(1600))-(coefficient_C[3][1]/1600))))-((coefficient_B[3][0]*np.log(T3))-(coefficient_C[3][0]/T3)+(-((coefficient_B[3][0]*np.log(1600))-(coefficient_C[3][0]/1600))))))
+            + (yN2*(((coefficient_B[4][1]*np.log(x))-(coefficient_C[4][1]/x)+(-((coefficient_B[4][1]*np.log(1600))-(coefficient_C[4][1]/1600))))-((coefficient_B[4][0]*np.log(T3))-(coefficient_C[4][0]/T3)+(-((coefficient_B[4][0]*np.log(1600))-(coefficient_C[4][0]/1600)))))))
+            - (Rbar * (np.log(x)-np.log(T3))) + (Rbar*np.log(rr)))
+
+        T4less = scipy.optimize.fsolve(fxnless, 1400)
+        T4greater = scipy.optimize.fsolve(fxngreater, 3000)
+
+        if T4less <= 1600 and T4greater <= 1600:
+            T4 = T4less[0]
+            deltaH_CO = (coefficient_A[0][0] + (T4 * coefficient_B[0][0]) + (np.log(T4) * coefficient_C[0][0])) - (coefficient_A[0][0] + (T3 * coefficient_B[0][0]) + (np.log(T3) * coefficient_C[0][0]))
+            deltaH_CO2 = (coefficient_A[1][0] + (T4 * coefficient_B[1][0]) + (np.log(T4) * coefficient_C[1][0])) - (coefficient_A[1][0] + (T3 * coefficient_B[1][0]) + (np.log(T3) * coefficient_C[1][0]))
+            deltaH_H2O = (coefficient_A[2][0] + (T4 * coefficient_B[2][0]) + (np.log(T4) * coefficient_C[2][0])) - (coefficient_A[2][0] + (T3 * coefficient_B[2][0]) + (np.log(T3) * coefficient_C[2][0]))
+            deltaH_O2 = (coefficient_A[3][0] + (T4 * coefficient_B[3][0]) + (np.log(T4) * coefficient_C[3][0])) - (coefficient_A[3][0] + (T3 * coefficient_B[3][0]) + (np.log(T3) * coefficient_C[3][0]))
+            deltaH_N2 = (coefficient_A[4][0] + (T4 * coefficient_B[4][0]) + (np.log(T4) * coefficient_C[4][0])) - (coefficient_A[4][0] + (T3 * coefficient_B[4][0]) + (np.log(T3) * coefficient_C[4][0]))
+
+        elif T4less > 1600 and T4greater > 1600:
+            T4 = T4greater[0]
+            deltaH_CO = (coefficient_A[0][1] + (T4 * coefficient_B[0][1]) + (np.log(T4) * coefficient_C[0][1])) - (coefficient_A[0][0] + (T3 * coefficient_B[0][0]) + (np.log(T3) * coefficient_C[0][0]))
+            deltaH_CO2 = (coefficient_A[1][1] + (T4 * coefficient_B[1][1]) + (np.log(T4) * coefficient_C[1][1])) - (coefficient_A[1][0] + (T3 * coefficient_B[1][0]) + (np.log(T3) * coefficient_C[1][0]))
+            deltaH_H2O = (coefficient_A[2][1] + (T4 * coefficient_B[2][1]) + (np.log(T4) * coefficient_C[2][1])) - (coefficient_A[2][0] + (T3 * coefficient_B[2][0]) + (np.log(T3) * coefficient_C[2][0]))
+            deltaH_O2 = (coefficient_A[3][1] + (T4 * coefficient_B[3][1]) + (np.log(T4) * coefficient_C[3][1])) - (coefficient_A[3][0] + (T3 * coefficient_B[3][0]) + (np.log(T3) * coefficient_C[3][0]))
+            deltaH_N2 = (coefficient_A[4][1] + (T4 * coefficient_B[4][1]) + (np.log(T4) * coefficient_C[4][1])) - (coefficient_A[4][0] + (T3 * coefficient_B[4][0]) + (np.log(T3) * coefficient_C[4][0]))
+        
+        elif T4less > 1600 and T4greater <= 1600:
+            T4 = T4greater[0]
+            deltaH_CO = (coefficient_A[0][0] + (T4 * coefficient_B[0][0]) + (np.log(T4) * coefficient_C[0][0])) - (coefficient_A[0][0] + (T3 * coefficient_B[0][0]) + (np.log(T3) * coefficient_C[0][0]))
+            deltaH_CO2 = (coefficient_A[1][0] + (T4 * coefficient_B[1][0]) + (np.log(T4) * coefficient_C[1][0])) - (coefficient_A[1][0] + (T3 * coefficient_B[1][0]) + (np.log(T3) * coefficient_C[1][0]))
+            deltaH_H2O = (coefficient_A[2][0] + (T4 * coefficient_B[2][0]) + (np.log(T4) * coefficient_C[2][0])) - (coefficient_A[2][0] + (T3 * coefficient_B[2][0]) + (np.log(T3) * coefficient_C[2][0]))
+            deltaH_O2 = (coefficient_A[3][0] + (T4 * coefficient_B[3][0]) + (np.log(T4) * coefficient_C[3][0])) - (coefficient_A[3][0] + (T3 * coefficient_B[3][0]) + (np.log(T3) * coefficient_C[3][0]))
+            deltaH_N2 = (coefficient_A[4][0] + (T4 * coefficient_B[4][0]) + (np.log(T4) * coefficient_C[4][0])) - (coefficient_A[4][0] + (T3 * coefficient_B[4][0]) + (np.log(T3) * coefficient_C[4][0]))
+        
+        elif T4less <= 1600 and T4greater > 1600:
+            T4 = T4greater[0]
+            deltaH_CO = (coefficient_A[0][0] + (T4 * coefficient_B[0][0]) + (np.log(T4) * coefficient_C[0][0])) - (coefficient_A[0][0] + (T3 * coefficient_B[0][0]) + (np.log(T3) * coefficient_C[0][0]))
+            deltaH_CO2 = (coefficient_A[1][0] + (T4 * coefficient_B[1][0]) + (np.log(T4) * coefficient_C[1][0])) - (coefficient_A[1][0] + (T3 * coefficient_B[1][0]) + (np.log(T3) * coefficient_C[1][0]))
+            deltaH_H2O = (coefficient_A[2][0] + (T4 * coefficient_B[2][0]) + (np.log(T4) * coefficient_C[2][0])) - (coefficient_A[2][0] + (T3 * coefficient_B[2][0]) + (np.log(T3) * coefficient_C[2][0]))
+            deltaH_O2 = (coefficient_A[3][0] + (T4 * coefficient_B[3][0]) + (np.log(T4) * coefficient_C[3][0])) - (coefficient_A[3][0] + (T3 * coefficient_B[3][0]) + (np.log(T3) * coefficient_C[3][0]))
+            deltaH_N2 = (coefficient_A[4][0] + (T4 * coefficient_B[4][0]) + (np.log(T4) * coefficient_C[4][0])) - (coefficient_A[4][0] + (T3 * coefficient_B[4][0]) + (np.log(T3) * coefficient_C[4][0]))
+
+        TMatrix[2][i] = T4
+        W3_4 = (-((nCO*deltaH_CO)+(nCO2*deltaH_CO2)+(nH2O*deltaH_H2O)+(nO2*deltaH_O2)+(nN2*deltaH_N2)))+(nPtotal*Rbar*(T4-T3))
+        WMatrix[1][i]= W3_4
+
+
+
+
+    elif T3 > 1600:
+
+        def fxnless(x):
+
+            return (((yCO*(((coefficient_B[0][0]*np.log(x))-(coefficient_C[0][0]/x)+coefficient_D[0][0])-((coefficient_B[0][1]*np.log(T3))-(coefficient_C[0][1]/T3)+coefficient_D[0][1])))
+            + (yCO2*(((coefficient_B[1][0]*np.log(x))-(coefficient_C[1][0]/x)+coefficient_D[1][0])-((coefficient_B[1][1]*np.log(T3))-(coefficient_C[1][1]/T3)+coefficient_D[1][1])))
+            + (yH2O*(((coefficient_B[2][0]*np.log(x))-(coefficient_C[2][0]/x)+coefficient_D[2][0])-((coefficient_B[2][1]*np.log(T3))-(coefficient_C[2][1]/T3)+coefficient_D[2][1])))
+            + (yO2*(((coefficient_B[3][0]*np.log(x))-(coefficient_C[3][0]/x)+coefficient_D[3][0])-((coefficient_B[3][1]*np.log(T3))-(coefficient_C[3][1]/T3)+coefficient_D[3][1])))
+            + (yN2*(((coefficient_B[4][0]*np.log(x))-(coefficient_C[4][0]/x)+coefficient_D[4][0])-((coefficient_B[4][1]*np.log(T3))-(coefficient_C[4][1]/T3)+coefficient_D[4][1]))))
+            - (Rbar * (np.log(x)-np.log(T3))) + (Rbar*np.log(rr)))
+        
+        def fxngreater(x):
+
+            return (((yCO*(((coefficient_B[0][1]*np.log(x))-(coefficient_C[0][1]/x)+coefficient_D[0][1])-((coefficient_B[0][1]*np.log(T3))-(coefficient_C[0][1]/T3)+coefficient_D[0][1])))
+            + (yCO2*(((coefficient_B[1][1]*np.log(x))-(coefficient_C[1][1]/x)+coefficient_D[1][1])-((coefficient_B[1][1]*np.log(T3))-(coefficient_C[1][1]/T3)+coefficient_D[1][1])))
+            + (yH2O*(((coefficient_B[2][1]*np.log(x))-(coefficient_C[2][1]/x)+coefficient_D[2][1])-((coefficient_B[2][1]*np.log(T3))-(coefficient_C[2][1]/T3)+coefficient_D[2][1])))
+            + (yO2*(((coefficient_B[3][1]*np.log(x))-(coefficient_C[3][1]/x)+coefficient_D[3][1])-((coefficient_B[3][1]*np.log(T3))-(coefficient_C[3][1]/T3)+coefficient_D[3][1])))
+            + (yN2*(((coefficient_B[4][1]*np.log(x))-(coefficient_C[4][1]/x)+coefficient_D[4][1])-((coefficient_B[4][1]*np.log(T3))-(coefficient_C[4][1]/T3)+coefficient_D[4][1]))))
+            - (Rbar * (np.log(x)-np.log(T3))) + (Rbar*np.log(rr)))
+
+        T4less = scipy.optimize.fsolve(fxnless, 1400)
+        T4greater = scipy.optimize.fsolve(fxngreater, 3000)
+
+        if T4less <= 1600 and T4greater <= 1600:
+            T4 = T4less[0]
+            deltaH_CO = (coefficient_A[0][0] + (T4 * coefficient_B[0][0]) + (np.log(T4) * coefficient_C[0][0])) - (coefficient_A[0][1] + (T3 * coefficient_B[0][1]) + (np.log(T3) * coefficient_C[0][1]))
+            deltaH_CO2 = (coefficient_A[1][0] + (T4 * coefficient_B[1][0]) + (np.log(T4) * coefficient_C[1][0])) - (coefficient_A[1][1] + (T3 * coefficient_B[1][1]) + (np.log(T3) * coefficient_C[1][1]))
+            deltaH_H2O = (coefficient_A[2][0] + (T4 * coefficient_B[2][0]) + (np.log(T4) * coefficient_C[2][0])) - (coefficient_A[2][1] + (T3 * coefficient_B[2][1]) + (np.log(T3) * coefficient_C[2][1]))
+            deltaH_O2 = (coefficient_A[3][0] + (T4 * coefficient_B[3][0]) + (np.log(T4) * coefficient_C[3][0])) - (coefficient_A[3][1] + (T3 * coefficient_B[3][1]) + (np.log(T3) * coefficient_C[3][1]))
+            deltaH_N2 = (coefficient_A[4][0] + (T4 * coefficient_B[4][0]) + (np.log(T4) * coefficient_C[4][0])) - (coefficient_A[4][1] + (T3 * coefficient_B[4][1]) + (np.log(T3) * coefficient_C[4][1]))
+
+        elif T4less > 1600 and T4greater > 1600:
+            T4 = T4greater[0]
+            deltaH_CO = (coefficient_A[0][1] + (T4 * coefficient_B[0][1]) + (np.log(T4) * coefficient_C[0][1])) - (coefficient_A[0][1] + (T3 * coefficient_B[0][1]) + (np.log(T3) * coefficient_C[0][1]))
+            deltaH_CO2 = (coefficient_A[1][1] + (T4 * coefficient_B[1][1]) + (np.log(T4) * coefficient_C[1][1])) - (coefficient_A[1][1] + (T3 * coefficient_B[1][1]) + (np.log(T3) * coefficient_C[1][1]))
+            deltaH_H2O = (coefficient_A[2][1] + (T4 * coefficient_B[2][1]) + (np.log(T4) * coefficient_C[2][1])) - (coefficient_A[2][1] + (T3 * coefficient_B[2][1]) + (np.log(T3) * coefficient_C[2][1]))
+            deltaH_O2 = (coefficient_A[3][1] + (T4 * coefficient_B[3][1]) + (np.log(T4) * coefficient_C[3][1])) - (coefficient_A[3][1] + (T3 * coefficient_B[3][1]) + (np.log(T3) * coefficient_C[3][1]))
+            deltaH_N2 = (coefficient_A[4][1] + (T4 * coefficient_B[4][1]) + (np.log(T4) * coefficient_C[4][1])) - (coefficient_A[4][1] + (T3 * coefficient_B[4][1]) + (np.log(T3) * coefficient_C[4][1]))
+        
+        elif T4less > 1600 and T4greater <= 1600:
+            T4 = T4greater[0]
+            deltaH_CO = (coefficient_A[0][0] + (T4 * coefficient_B[0][0]) + (np.log(T4) * coefficient_C[0][0])) - (coefficient_A[0][1] + (T3 * coefficient_B[0][1]) + (np.log(T3) * coefficient_C[0][1]))
+            deltaH_CO2 = (coefficient_A[1][0] + (T4 * coefficient_B[1][0]) + (np.log(T4) * coefficient_C[1][0])) - (coefficient_A[1][1] + (T3 * coefficient_B[1][1]) + (np.log(T3) * coefficient_C[1][1]))
+            deltaH_H2O = (coefficient_A[2][0] + (T4 * coefficient_B[2][0]) + (np.log(T4) * coefficient_C[2][0])) - (coefficient_A[2][1] + (T3 * coefficient_B[2][1]) + (np.log(T3) * coefficient_C[2][1]))
+            deltaH_O2 = (coefficient_A[3][0] + (T4 * coefficient_B[3][0]) + (np.log(T4) * coefficient_C[3][0])) - (coefficient_A[3][1] + (T3 * coefficient_B[3][1]) + (np.log(T3) * coefficient_C[3][1]))
+            deltaH_N2 = (coefficient_A[4][0] + (T4 * coefficient_B[4][0]) + (np.log(T4) * coefficient_C[4][0])) - (coefficient_A[4][1] + (T3 * coefficient_B[4][1]) + (np.log(T3) * coefficient_C[4][1]))
+        
+        elif T4less <= 1600 and T4greater > 1600:
+            T4 = T4greater[0]
+            deltaH_CO = (coefficient_A[0][0] + (T4 * coefficient_B[0][0]) + (np.log(T4) * coefficient_C[0][0])) - (coefficient_A[0][1] + (T3 * coefficient_B[0][1]) + (np.log(T3) * coefficient_C[0][1]))
+            deltaH_CO2 = (coefficient_A[1][0] + (T4 * coefficient_B[1][0]) + (np.log(T4) * coefficient_C[1][0])) - (coefficient_A[1][1] + (T3 * coefficient_B[1][1]) + (np.log(T3) * coefficient_C[1][1]))
+            deltaH_H2O = (coefficient_A[2][0] + (T4 * coefficient_B[2][0]) + (np.log(T4) * coefficient_C[2][0])) - (coefficient_A[2][1] + (T3 * coefficient_B[2][1]) + (np.log(T3) * coefficient_C[2][1]))
+            deltaH_O2 = (coefficient_A[3][0] + (T4 * coefficient_B[3][0]) + (np.log(T4) * coefficient_C[3][0])) - (coefficient_A[3][1] + (T3 * coefficient_B[3][1]) + (np.log(T3) * coefficient_C[3][1]))
+            deltaH_N2 = (coefficient_A[4][0] + (T4 * coefficient_B[4][0]) + (np.log(T4) * coefficient_C[4][0])) - (coefficient_A[4][1] + (T3 * coefficient_B[4][1]) + (np.log(T3) * coefficient_C[4][1]))
+
+        TMatrix[2][i] = T4
+        W3_4 = (-((nCO*deltaH_CO)+(nCO2*deltaH_CO2)+(nH2O*deltaH_H2O)+(nO2*deltaH_O2)+(nN2*deltaH_N2)))+(nPtotal*Rbar*(T4-T3))
+        WMatrix[1][i]= W3_4
+    
+    P4 = ((P3*T4)/(rr*T3))
+    PMatrix[2][i] = P4
+
+TMatrix_column = np.array([["T2"],
+                        ["T3"],
+                        ["T4"]])
+TMatrix = np.append(TMatrix_column, np.round(TMatrix,9), axis=1)
+
+PMatrix_column = np.array([["P2"],
+                        ["P3"],
+                        ["P4"]])
+PMatrix = np.append(PMatrix_column, np.round(PMatrix,9), axis=1)
+
+WMatrix_column = np.array([["1W2"],
+                        ["3W4"]])
+WMatrix = np.append(WMatrix_column, np.round(WMatrix,9), axis=1)
+
+yMatrix_column = np.array([["yco"],
+                        ["yco2"],
+                        ["yh2o"],
+                        ["yo2"],
+                        ["yn2"]])
+yMatrix = np.append(yMatrix_column, np.round(yMatrix,9), axis=1)
+
+nMatrix_column = np.array([["nco"],
+                        ["nco2"],
+                        ["nh2o"],
+                        ["no2"],
+                        ["nn2"]])
+nMatrix = np.append(nMatrix_column, np.round(nMatrix,9), axis=1)
+
+
+
+header = ["Variables","Y/Ycc=0.7","Y/Ycc=1.0","Y/Ycc=1.4"]
+
+print(tabulate([header,TMatrix[0,:], PMatrix[0,:], WMatrix[0,:], TMatrix[1,:], PMatrix[1,:], yMatrix[0,:], yMatrix[1,:],yMatrix[2,:],yMatrix[3,:],yMatrix[4,:],
+nMatrix[0,:],nMatrix[1,:],nMatrix[2,:],nMatrix[3,:],nMatrix[4,:],TMatrix[2,:],PMatrix[2,:],WMatrix[1,:]],headers="firstrow",tablefmt="pretty"))
+

@@ -1,0 +1,253 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
+#MAE 411 HW #7 Part 1
+
+coefficient_A = [
+        [299180, 309070],
+        [56835, 93048],
+        [88923, 154670],
+        [43388, 127010],
+        [31317, 44639],
+]
+
+coefficient_B = [
+        [37.85, 39.29],
+        [66.27, 68.58],
+        [49.36, 60.43],
+        [42.27, 46.25],
+        [37.46, 39.32],
+]
+
+coefficient_C = [
+        [-4571.9, -6201.9],
+        [-11634.0, -16979.0],
+        [-7940.8, -19212.0],
+        [-6635.4, -18798.0],
+        [-4559.3, -6753.4],
+]
+
+Ma = 0.84
+alt = 5000
+Mair = 28.97
+Mfuel = 197.7
+Hrp = -8561996.6
+HV = -Hrp
+
+
+
+MC = 14.4
+MH = 24.9
+MO = 0
+Ycc = MC + (MH/4) - (MO/2)
+Ymin = Ycc - (MC/2)
+
+N1 = 0
+N2 = MC
+N3 = MH/2
+
+Ta = 255.7
+Pa = 54.05
+Rhoa = 0.736
+Rair = Rg = 287
+gair = 1.4
+gg = 1.3333
+Cp0air = ((gair * Rair)/(gair - 1))
+Cp0g = ((gg * Rg)/(gg - 1))
+
+
+nd = 0.93
+nLPc = nHPc = 0.87
+nLPm = nHPm = 0.99
+nLPt = nHPt = 0.90
+nN = 0.95
+nC = 0.87
+
+nbAB = nbMB = nbCC = 0.98
+deltaP0AB = deltaP0CC =.04
+
+TINT = Tp = T04 = 1200
+OPR = 9
+# P03/P01 = 9
+PRClp = PRChp = 3
+
+
+Va = Ma * np.sqrt(gair * Rair * Ta)
+T01 = T0a = Ta + ((Va**2)/(2*Cp0air))
+P0a = Pa * (1+(((((gair - 1)/2)*(Ma**2)))**(gair/(gair-1))))
+P01 = Pa * ((1+ (nd*((gair - 1)/2)*(Ma**2)))**(gair/(gair-1)))
+Pb = Pa
+
+P02 = P01 * PRClp
+P03 = P01 * OPR
+P04 = P03 * (1-deltaP0CC)
+
+T02 = T01 + ((T01*((PRClp**((gair-1)/gair))-1))/(nLPc))
+T03 = T02 + ((T02*((PRChp**((gair-1)/gair))-1))/(nHPc))
+WcLP = Cp0air * (T01 - T02)
+WcHP = Cp0air * (T02 - T03)
+
+Tr = T03
+
+FsNOAB = 535.841
+tsfcNOAB = 0.112984
+
+TEMPAB = [1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000]
+FsABratio = []
+tsfcABratio = []
+
+
+# Solve for Y and f
+if Tp > 0:
+    x = Tp
+    if x <= 1600 and Tr <= 1600:
+        deltaH_CO = (coefficient_A[0][0] + (x * coefficient_B[0][0]) + (np.log(x) * coefficient_C[0][0])) - (coefficient_A[0][0] + (Tr * coefficient_B[0][0]) + (np.log(Tr) * coefficient_C[0][0]))
+        deltaH_CO2 = (coefficient_A[1][0] + (x * coefficient_B[1][0]) + (np.log(x) * coefficient_C[1][0])) - (coefficient_A[1][0] + (Tr * coefficient_B[1][0]) + (np.log(Tr) * coefficient_C[1][0]))
+        deltaH_H2O = (coefficient_A[2][0] + (x * coefficient_B[2][0]) + (np.log(x) * coefficient_C[2][0])) - (coefficient_A[2][0] + (Tr * coefficient_B[2][0]) + (np.log(Tr) * coefficient_C[2][0]))
+        deltaH_O2 = (coefficient_A[3][0] + (x * coefficient_B[3][0]) + (np.log(x) * coefficient_C[3][0])) - (coefficient_A[3][0] + (Tr * coefficient_B[3][0]) + (np.log(Tr) * coefficient_C[3][0]))
+        deltaH_N2 = (coefficient_A[4][0] + (x * coefficient_B[4][0]) + (np.log(x) * coefficient_C[4][0])) - (coefficient_A[4][0] + (Tr * coefficient_B[4][0]) + (np.log(Tr) * coefficient_C[4][0]))
+
+    elif x <= 1600 and Tr > 1600:
+        deltaH_CO = (coefficient_A[0][0] + (x * coefficient_B[0][0]) + (np.log(x) * coefficient_C[0][0])) - (coefficient_A[0][1] + (Tr * coefficient_B[0][1]) + (np.log(Tr) * coefficient_C[0][1]))
+        deltaH_CO2 = (coefficient_A[1][0] + (x * coefficient_B[1][0]) + (np.log(x) * coefficient_C[1][0])) - (coefficient_A[1][1] + (Tr * coefficient_B[1][1]) + (np.log(Tr) * coefficient_C[1][1]))
+        deltaH_H2O = (coefficient_A[2][0] + (x * coefficient_B[2][0]) + (np.log(x) * coefficient_C[2][0])) - (coefficient_A[2][1] + (Tr * coefficient_B[2][1]) + (np.log(Tr) * coefficient_C[2][1]))
+        deltaH_O2 = (coefficient_A[3][0] + (x * coefficient_B[3][0]) + (np.log(x) * coefficient_C[3][0])) - (coefficient_A[3][1] + (Tr * coefficient_B[3][1]) + (np.log(Tr) * coefficient_C[3][1]))
+        deltaH_N2 = (coefficient_A[4][0] + (x * coefficient_B[4][0]) + (np.log(x) * coefficient_C[4][0])) - (coefficient_A[4][1] + (Tr * coefficient_B[4][1]) + (np.log(Tr) * coefficient_C[4][1]))
+
+
+    elif x > 1600 and Tr <= 1600:
+        deltaH_CO = (coefficient_A[0][1] + (x * coefficient_B[0][1]) + (np.log(x) * coefficient_C[0][1])) - (coefficient_A[0][0] + (Tr * coefficient_B[0][0]) + (np.log(Tr) * coefficient_C[0][0]))
+        deltaH_CO2 = (coefficient_A[1][1] + (x * coefficient_B[1][1]) + (np.log(x) * coefficient_C[1][1])) - (coefficient_A[1][0] + (Tr * coefficient_B[1][0]) + (np.log(Tr) * coefficient_C[1][0]))
+        deltaH_H2O = (coefficient_A[2][1] + (x * coefficient_B[2][1]) + (np.log(x) * coefficient_C[2][1])) - (coefficient_A[2][0] + (Tr * coefficient_B[2][0]) + (np.log(Tr) * coefficient_C[2][0]))
+        deltaH_O2 = (coefficient_A[3][1] + (x * coefficient_B[3][1]) + (np.log(x) * coefficient_C[3][1])) - (coefficient_A[3][0] + (Tr * coefficient_B[3][0]) + (np.log(Tr) * coefficient_C[3][0]))
+        deltaH_N2 = (coefficient_A[4][1] + (x * coefficient_B[4][1]) + (np.log(x) * coefficient_C[4][1])) - (coefficient_A[4][0] + (Tr * coefficient_B[4][0]) + (np.log(Tr) * coefficient_C[4][0]))
+
+    elif x > 1600 and Tr > 1600:
+        deltaH_CO = (coefficient_A[0][1] + (x * coefficient_B[0][1]) + (np.log(x) * coefficient_C[0][1])) - (coefficient_A[0][1] + (Tr * coefficient_B[0][1]) + (np.log(Tr) * coefficient_C[0][1]))
+        deltaH_CO2 = (coefficient_A[1][1] + (x * coefficient_B[1][1]) + (np.log(x) * coefficient_C[1][1])) - (coefficient_A[1][1] + (Tr * coefficient_B[1][1]) + (np.log(Tr) * coefficient_C[1][1]))
+        deltaH_H2O = (coefficient_A[2][1] + (x * coefficient_B[2][1]) + (np.log(x) * coefficient_C[2][1])) - (coefficient_A[2][1] + (Tr * coefficient_B[2][1]) + (np.log(Tr) * coefficient_C[2][1]))
+        deltaH_O2 = (coefficient_A[3][1] + (x * coefficient_B[3][1]) + (np.log(x) * coefficient_C[3][1])) - (coefficient_A[3][1] + (Tr * coefficient_B[3][1]) + (np.log(Tr) * coefficient_C[3][1]))
+        deltaH_N2 = (coefficient_A[4][1] + (x * coefficient_B[4][1]) + (np.log(x) * coefficient_C[4][1])) - (coefficient_A[4][1] + (Tr * coefficient_B[4][1]) + (np.log(Tr) * coefficient_C[4][1]))
+
+    Y = ((Ycc*deltaH_O2)-Hrp-(N1*282800)-(N1*deltaH_CO)-(N2*deltaH_CO2)-(N3*deltaH_H2O))/(deltaH_O2 + (3.76*deltaH_N2))
+    X = 1/Y
+    fideal = (1/(4.76*Y)) * (Mfuel/Mair)
+
+f = fideal / nbCC
+
+T05 = T04 + (WcHP/((1+f)*Cp0g*nHPm))
+P05 = P04 * ((1 - ((1-(T05/T04))/nHPt))**(gg/(gg-1)))
+TrAB = T06 = T05 + (WcLP/((1+f)*Cp0g*nLPm))
+P06 = P05 * ((1 - ((1-(T06/T05))/nLPt))**(gg/(gg-1)))
+P07 = P06 * (1-deltaP0AB)
+
+# Solve for Y
+for i, x in enumerate(TEMPAB):
+
+    # Choke Test
+    PstarP0i = ((1-((1/nN)*(1-(2/(gg+1)))))**(gg/(gg-1)))
+    PbP0i = Pb/P07
+
+    if PbP0i > PstarP0i:
+        # Not Choked
+        Pe = Pb * 1000
+        Te = x - (((x - (x*(PbP0i**(((gg-1))/gg))))/nN))
+        Rhoe = Pe/(Rg*Te)
+        Me = np.sqrt(((x/Te)-1)*(2/(gg-1)))
+        Ve = Me* np.sqrt(gg*Rg*Te)
+
+    else:
+        # Choked
+        Me = 1
+        Pe = PstarP0i * P07 * 1000
+        Te = x * (2/(gg+1))
+        Ve = np.sqrt(gg * Rg * Te)
+        Rhoe = Pe/(Rg*Te)
+
+
+    # Solve for YAB and fAB
+    if x <= 1600 and TrAB <= 1600:
+        deltaH_CO = (coefficient_A[0][0] + (x * coefficient_B[0][0]) + (np.log(x) * coefficient_C[0][0])) - (coefficient_A[0][0] + (TrAB * coefficient_B[0][0]) + (np.log(TrAB) * coefficient_C[0][0]))
+        deltaH_CO2 = (coefficient_A[1][0] + (x * coefficient_B[1][0]) + (np.log(x) * coefficient_C[1][0])) - (coefficient_A[1][0] + (TrAB * coefficient_B[1][0]) + (np.log(TrAB) * coefficient_C[1][0]))
+        deltaH_H2O = (coefficient_A[2][0] + (x * coefficient_B[2][0]) + (np.log(x) * coefficient_C[2][0])) - (coefficient_A[2][0] + (TrAB * coefficient_B[2][0]) + (np.log(TrAB) * coefficient_C[2][0]))
+        deltaH_O2 = (coefficient_A[3][0] + (x * coefficient_B[3][0]) + (np.log(x) * coefficient_C[3][0])) - (coefficient_A[3][0] + (TrAB * coefficient_B[3][0]) + (np.log(TrAB) * coefficient_C[3][0]))
+        deltaH_N2 = (coefficient_A[4][0] + (x * coefficient_B[4][0]) + (np.log(x) * coefficient_C[4][0])) - (coefficient_A[4][0] + (TrAB * coefficient_B[4][0]) + (np.log(TrAB) * coefficient_C[4][0]))
+
+    elif x <= 1600 and TrAB > 1600:
+        deltaH_CO = (coefficient_A[0][0] + (x * coefficient_B[0][0]) + (np.log(x) * coefficient_C[0][0])) - (coefficient_A[0][1] + (TrAB * coefficient_B[0][1]) + (np.log(TrAB) * coefficient_C[0][1]))
+        deltaH_CO2 = (coefficient_A[1][0] + (x * coefficient_B[1][0]) + (np.log(x) * coefficient_C[1][0])) - (coefficient_A[1][1] + (TrAB * coefficient_B[1][1]) + (np.log(TrAB) * coefficient_C[1][1]))
+        deltaH_H2O = (coefficient_A[2][0] + (x * coefficient_B[2][0]) + (np.log(x) * coefficient_C[2][0])) - (coefficient_A[2][1] + (TrAB * coefficient_B[2][1]) + (np.log(TrAB) * coefficient_C[2][1]))
+        deltaH_O2 = (coefficient_A[3][0] + (x * coefficient_B[3][0]) + (np.log(x) * coefficient_C[3][0])) - (coefficient_A[3][1] + (TrAB * coefficient_B[3][1]) + (np.log(TrAB) * coefficient_C[3][1]))
+        deltaH_N2 = (coefficient_A[4][0] + (x * coefficient_B[4][0]) + (np.log(x) * coefficient_C[4][0])) - (coefficient_A[4][1] + (TrAB * coefficient_B[4][1]) + (np.log(TrAB) * coefficient_C[4][1]))
+
+
+    elif x > 1600 and TrAB <= 1600:
+        deltaH_CO = (coefficient_A[0][1] + (x * coefficient_B[0][1]) + (np.log(x) * coefficient_C[0][1])) - (coefficient_A[0][0] + (TrAB * coefficient_B[0][0]) + (np.log(TrAB) * coefficient_C[0][0]))
+        deltaH_CO2 = (coefficient_A[1][1] + (x * coefficient_B[1][1]) + (np.log(x) * coefficient_C[1][1])) - (coefficient_A[1][0] + (TrAB * coefficient_B[1][0]) + (np.log(TrAB) * coefficient_C[1][0]))
+        deltaH_H2O = (coefficient_A[2][1] + (x * coefficient_B[2][1]) + (np.log(x) * coefficient_C[2][1])) - (coefficient_A[2][0] + (TrAB * coefficient_B[2][0]) + (np.log(TrAB) * coefficient_C[2][0]))
+        deltaH_O2 = (coefficient_A[3][1] + (x * coefficient_B[3][1]) + (np.log(x) * coefficient_C[3][1])) - (coefficient_A[3][0] + (TrAB * coefficient_B[3][0]) + (np.log(TrAB) * coefficient_C[3][0]))
+        deltaH_N2 = (coefficient_A[4][1] + (x * coefficient_B[4][1]) + (np.log(x) * coefficient_C[4][1])) - (coefficient_A[4][0] + (TrAB * coefficient_B[4][0]) + (np.log(TrAB) * coefficient_C[4][0]))
+
+    elif x > 1600 and TrAB > 1600:
+        deltaH_CO = (coefficient_A[0][1] + (x * coefficient_B[0][1]) + (np.log(x) * coefficient_C[0][1])) - (coefficient_A[0][1] + (TrAB * coefficient_B[0][1]) + (np.log(TrAB) * coefficient_C[0][1]))
+        deltaH_CO2 = (coefficient_A[1][1] + (x * coefficient_B[1][1]) + (np.log(x) * coefficient_C[1][1])) - (coefficient_A[1][1] + (TrAB * coefficient_B[1][1]) + (np.log(TrAB) * coefficient_C[1][1]))
+        deltaH_H2O = (coefficient_A[2][1] + (x * coefficient_B[2][1]) + (np.log(x) * coefficient_C[2][1])) - (coefficient_A[2][1] + (TrAB * coefficient_B[2][1]) + (np.log(TrAB) * coefficient_C[2][1]))
+        deltaH_O2 = (coefficient_A[3][1] + (x * coefficient_B[3][1]) + (np.log(x) * coefficient_C[3][1])) - (coefficient_A[3][1] + (TrAB * coefficient_B[3][1]) + (np.log(TrAB) * coefficient_C[3][1]))
+        deltaH_N2 = (coefficient_A[4][1] + (x * coefficient_B[4][1]) + (np.log(x) * coefficient_C[4][1])) - (coefficient_A[4][1] + (TrAB * coefficient_B[4][1]) + (np.log(TrAB) * coefficient_C[4][1]))
+    Z = (((3.76*deltaH_N2) + deltaH_O2)+(X*((N2*deltaH_CO2)+(N3*deltaH_H2O)-(Ycc*deltaH_O2))))/((Ycc*deltaH_O2)-Hrp-(N2*deltaH_CO2)-(N3*deltaH_H2O))
+    fABideal = (Z/4.76) * (Mfuel/Mair)
+    fAB = fABideal / nbAB
+
+    FsAB_solve = (((1+fAB) * Ve) - Va) + ((((Pe - (Pa*1000)))*(1+fAB)) / (Rhoe * Ve))
+    print(FsAB_solve)
+    FsABratio_solve = FsAB_solve/FsNOAB
+    tsfcAB_solve = (fAB/FsAB_solve) * 3600
+    tsfcABratio_solve = tsfcAB_solve/tsfcNOAB
+
+    FsABratio.append(FsABratio_solve)
+    tsfcABratio.append(tsfcABratio_solve)
+            
+
+
+
+plt.plot(TEMPAB, FsABratio, marker='o')
+
+
+plt.title("MAE 411 HW#7 Part I")
+plt.xlabel("TEMPAB")
+plt.ylabel("FsAB/FsNOAB")
+
+plt.show()
+
+round_FsABratio = [round(num, 7) for num in FsABratio]
+
+table = plt.table(cellText=[round_FsABratio], colLabels=TEMPAB, loc='center', 
+                  cellLoc='center')
+table.auto_set_font_size(False)
+h = table.get_celld()[(0,0)].get_height()
+w = table.get_celld()[(0,0)].get_width()
+plt.title("MAE 411 HW#7 Part I FsAB/FsNOAB")
+plt.axis('off')
+plt.show()
+
+
+plt.plot(TEMPAB, tsfcABratio, marker='o')
+
+
+
+plt.title("MAE 411 HW#7 Part I")
+plt.xlabel("TEMPAB")
+plt.ylabel("tsfcAB/tsfcNOAB")
+
+plt.show()
+
+round_tsfcABratio = [round(num, 7) for num in tsfcABratio]
+
+table = plt.table(cellText=[round_tsfcABratio], colLabels=TEMPAB, loc='center', 
+                  cellLoc='center')
+table.auto_set_font_size(False)
+h = table.get_celld()[(0,0)].get_height()
+w = table.get_celld()[(0,0)].get_width()
+plt.title("MAE 411 HW#7 Part I tsfcAB/tsfcNOAB")
+plt.axis('off')
+plt.show()
